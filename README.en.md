@@ -45,7 +45,7 @@ Each conversation **independently binds** to one AI backend and locks after the 
 - Conversation 2: have **Claude Code** modify a SwiftUI component
 - Conversation 3: get **Codex** to generate a poster
 
-Up to **3 conversations** can be active simultaneously (`⌘1` ~ `⌘3` jump directly), each independently bound to a mode without cross-contamination. When switching conversations, the header's mode color/icon and the Dynamic Island sprite sync in real time.
+Up to **8 conversations** can be active simultaneously (`⌘1` ~ `⌘8` jump directly), each independently bound to a mode without cross-contamination. When switching conversations, the header's mode color/icon and the Dynamic Island sprite sync in real time.
 
 ### 🏔 Dynamic Island = OS-level status display
 
@@ -58,24 +58,15 @@ The capsule below the notch is not decoration:
 - **Screenshot shutter** 0.18s white flash + scale bounce
 - **Background conversation glow**: when one of your conversations is running in the background, the corresponding spot on the capsule pulses softly
 
-### 🦞 Dual desktop pets · companions (Claude / Online AI mode)
+### 🦞 Dual desktop pets · companions
 
-Switch to Claude after 3 min idle / switch to Online AI immediately → a pixel critter jumps from the Dynamic Island onto your desktop:
+Claude mode has **Clawd 🦞** (orange pixel crab); Online AI mode has **Cloud ☁️** (indigo pixel sprite). The two little critters wander around below the menu bar, blink, breathe, look left and right, and trot over when the cursor gets close — **cute by design**.
 
-| Mode | Pet | Trigger |
-|---|---|---|
-| Claude Code | **Clawd 🦞** orange pixel crab | After 3 min idle (or enable "Free roam" for immediate) |
-| Online AI | **Cloud ☁️** indigo pixel sprite | Appears immediately when you switch in |
+They're also useful:
 
-Both pets **share the same interactions**:
-
-- **Sniffs files on its own** (Clawd only): occasionally walks down to the desktop, picks an icon, and uses Hermes to generate a ≤10-character quip about the filename, shown in a speech bubble
-- **Can be dragged**: hold and drag onto any desktop icon → it stops there and sniffs + AI commentary
-- **Eats files** (Clawd only): drop a file onto it → chews and swallows → the file automatically attaches to the current conversation + sends
-- **Rubs against the cursor**: when your mouse gets close it trots over to say hi
-- **Single / double click**: both open the chat window without switching AI modes
-
-Filenames pass through a local blocklist before reaching the AI (salary / contract / password / .env etc. are skipped).
+- 🍽 **Drop a file on Clawd** → it chews and swallows → file auto-attaches to the current conversation + sends
+- 👃 **Drag Clawd onto a desktop icon** → it stops and sniffs → AI generates a ≤10-character quip about the filename
+- 🛡 Filenames pass through a local blocklist before reaching the AI (salary / contract / password / .env etc. are skipped)
 
 ### 🎙 Push-to-talk from any app
 
@@ -98,7 +89,7 @@ Saves context, saves tokens, runs faster, and the AI gets to decide which parts 
 ### 💬 Multimodal · Multi-conversation · Cross-AI shared context
 
 - Image paste / drag / screenshot / Codex generation — all supported
-- Up to 3 conversations at once, `⌘N` / `⌘[` / `⌘]` / `⌘1-3` for quick switching
+- Up to 8 conversations at once, `⌘N` / `⌘[` / `⌘]` / `⌘1-8` for quick switching
 - When you switch modes, the entire conversation history gets passed to the new model — **memory is shared across AIs** (Claude can see what Hermes said earlier, and vice versa)
 - Red dot on the capsule when a background conversation finishes
 
