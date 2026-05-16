@@ -15,7 +15,7 @@ cd "$SCRIPT_DIR"
 
 APP_NAME="HermesPet"
 DISPLAY_NAME="Hermes 桌宠"
-VERSION="1.0.2"
+VERSION="1.2.0"
 BUILD_DIR="$SCRIPT_DIR/.build"
 DIST_DIR="$SCRIPT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
@@ -48,8 +48,51 @@ cp "$BINARY" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp "$SCRIPT_DIR/Info.plist" "$APP_BUNDLE/Contents/"
 echo "APPL????" > "$APP_BUNDLE/Contents/PkgInfo"
 
+# App 图标（跟 build.sh 一致）
+if [ -f "$SCRIPT_DIR/AppIcon.icns" ]; then
+    cp "$SCRIPT_DIR/AppIcon.icns" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+    echo "🎨 已复制 AppIcon.icns"
+fi
+
+# v1.2.0+: 内嵌 opencode 二进制让在线 AI 模式开箱即用 agent runtime
+# 跟 build.sh 用同一份缓存，首次跑会 curl 下载，之后复用
+OPENCODE_VERSION="${OPENCODE_VERSION:-v1.15.1}"
+OPENCODE_ARCH="darwin-arm64"
+OPENCODE_CACHE_DIR="$SCRIPT_DIR/.opencode-cache/$OPENCODE_VERSION"
+OPENCODE_BINARY="$OPENCODE_CACHE_DIR/opencode"
+
+if [ ! -f "$OPENCODE_BINARY" ]; then
+    echo "📥 下载 opencode $OPENCODE_VERSION ($OPENCODE_ARCH)..."
+    mkdir -p "$OPENCODE_CACHE_DIR"
+    OPENCODE_URL="https://github.com/anomalyco/opencode/releases/download/$OPENCODE_VERSION/opencode-$OPENCODE_ARCH.zip"
+    curl -fL --progress-bar -o "$OPENCODE_CACHE_DIR/opencode.zip" "$OPENCODE_URL"
+    unzip -q -o "$OPENCODE_CACHE_DIR/opencode.zip" -d "$OPENCODE_CACHE_DIR"
+    chmod +x "$OPENCODE_BINARY"
+    rm "$OPENCODE_CACHE_DIR/opencode.zip"
+fi
+
+OPENCODE_SIZE="$(du -h "$OPENCODE_BINARY" | cut -f1)"
+echo "📦 嵌入 opencode $OPENCODE_VERSION ($OPENCODE_SIZE)"
+cp "$OPENCODE_BINARY" "$APP_BUNDLE/Contents/Resources/opencode"
+chmod +x "$APP_BUNDLE/Contents/Resources/opencode"
+
 echo "🔐 ad-hoc 签名（分发用，任何 Mac 都能跑）..."
-codesign --force --deep --sign - "$APP_BUNDLE"
+# 清 xattr 防 codesign 报 "resource fork / Finder information"（iCloud daemon 会反复写回，重试）
+sign_ok=0
+for attempt in 1 2 3; do
+    find "$APP_BUNDLE" -exec xattr -c {} + 2>/dev/null || true
+    xattr -d com.apple.FinderInfo "$APP_BUNDLE" 2>/dev/null || true
+    xattr -d "com.apple.fileprovider.fpfs#P" "$APP_BUNDLE" 2>/dev/null || true
+    if codesign --force --deep --sign - "$APP_BUNDLE" 2>/dev/null; then
+        sign_ok=1
+        break
+    fi
+    sleep 0.2
+done
+if [ $sign_ok -eq 0 ]; then
+    echo "❌ codesign 失败"
+    exit 1
+fi
 
 echo "💿 组装 DMG 内容..."
 mkdir -p "$STAGING_DIR"
@@ -89,11 +132,22 @@ cat > "$STAGING_DIR/⚠️ 第一次打开请看我.txt" <<'EOF'
 授权完任一权限后，建议完全退出 Hermes 桌宠（菜单栏右键 → 退出）
 再重新打开一次，让新权限对进程生效。
 
+【v1.2.0 重磅升级 · 在线 AI 模式变 agent 了】
+
+  现在「在线 AI」模式不只是聊天 —— 能让 AI 真的读你的本地文件、
+  跑命令、联网搜索、看图，跟 Claude Code / Codex 同档能力，
+  **完全不需要装任何外部命令行工具**。
+
+  原理：HermesPet 内置了 opencode (MIT 开源 agent runtime)
+  约 100MB，所以 DMG 比之前大了不少。一次装上免后顾之忧。
+
 【最快上手 · 不需要装任何命令行工具】
 
-  打开 Hermes 桌宠 → 点齿轮 ⚙️ 进设置 → "AI 后端" → 服务商下拉
+  打开 Hermes 桌宠 → 点齿轮 ⚙️ 进设置 → "在线 AI" → 服务商下拉
   里面已经内置了 DeepSeek / 智谱 GLM / Moonshot Kimi / OpenAI 预设
   选一家 → 粘贴 API Key → 关闭设置 → 就能开始聊了
+
+  推荐：Moonshot Kimi K2.6 中文体验好，agent 工具调用稳定。
 
   各家获取 API Key 的入口：
     DeepSeek   https://platform.deepseek.com/api_keys
@@ -101,11 +155,19 @@ cat > "$STAGING_DIR/⚠️ 第一次打开请看我.txt" <<'EOF'
     Moonshot   https://platform.moonshot.cn/console/api-keys
     OpenAI     https://platform.openai.com/api-keys
 
-【进阶：本地 CLI 模式（可选）】
-  如果你的机器装了 claude / codex 命令行工具，
+【试试看 AI 的本地能力】
+
+  配好 Key 后试这几个问题感受一下：
+    - "看一下我桌面上有什么文件"
+    - "帮我把 ~/Downloads 里的截图按日期归类到文件夹"
+    - "搜一下今天 macOS 26 的更新"
+    - 拖一张图片进来：「这张图里有什么？」
+    - 拖一份 PDF：「帮我总结一下这份文档」
+
+【进阶：还能装 Claude Code / Codex】
+  如果你的机器另外装了 claude / codex 命令行工具，
   点聊天窗顶部的模式图标就能切到对应模式 ——
-  可以让 AI 读写文件、跑命令、生成图片。
-  没装的话切了会自动回退到 Hermes，不会卡住。
+  可以享受这些更强的 agent。没装也不影响在线 AI 模式正常用。
 EOF
 
 echo "💿 hdiutil 制作 DMG..."
